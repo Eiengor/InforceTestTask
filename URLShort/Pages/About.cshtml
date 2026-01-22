@@ -1,0 +1,16 @@
+﻿@page
+@model URLShort.Pages.AboutModel
+@{
+    ViewData["Title"] = "About";
+}
+
+<h2>About Url Shortener algorithm</h2>
+
+<p>
+    URL shortener uses a hashing algorithm to convert long URLs into short.<br />
+    1. Gets hash code from original URL.<br />
+    2. Converts hash code to Base64 string.<br />
+    3. Deletes '=' and replaces '+' to '-', '/' to '_'.
+</p>
+
+<h4>Go to Short URL table to see all URLs and add\delete something.</h4>

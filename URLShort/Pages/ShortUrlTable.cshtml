@@ -1,0 +1,206 @@
+﻿@page
+@model URLShort.Pages.ShortUrlTableModel
+@{
+    ViewData["Title"] = "Short URLS table";
+}
+<h2>@ViewData["Title"]</h2>
+
+@if (Model.IsLoggedIn)
+{
+    <div class="mb-3">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUrlModal">
+            Add New URL
+        </button>
+    </div>
+}
+
+<div id="urlTableContainer">
+    @if (Model.Urls == null || !Model.Urls.Any())
+    {
+        <p>No URLs available.</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Original URL</th>
+                    <th>Shortened URL</th>
+                    <th>Created At</th>
+                    @if (Model.IsLoggedIn)
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+            </thead>
+            <tbody id="urlTableBody">
+                @foreach (var url in Model.Urls)
+                {
+                    <tr data-url-id="@url.Id">
+                        <td><a href="@url.OriginalUrl" target="_blank">@url.OriginalUrl</a></td>
+                        <td>@url.ShortenedUrl</td>
+                        <td>@url.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        @if (Model.IsLoggedIn)
+                        {
+                            <td>
+                                <button class="btn btn-danger btn-sm delete-btn" data-url-id="@url.Id">Delete</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<div class="modal fade" id="addUrlModal" tabindex="-1" aria-labelledby="addUrlModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUrlModalLabel">Add New URL</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="addUrlError" class="alert alert-danger d-none"></div>
+                <div class="mb-3">
+                    <label for="originalUrl" class="form-label">Original URL</label>
+                    <input type="url" class="form-control" id="originalUrl" placeholder="https://example.com" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveUrlBtn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const apiUrl = 'https://localhost:7122/api/urlshortener';
+        const isLoggedIn = @Model.IsLoggedIn.ToString().ToLower();
+        const userId = @(Model.UserId ?? 0);
+
+        // Add URL
+        document.getElementById('saveUrlBtn')?.addEventListener('click', async function() {
+            const originalUrl = document.getElementById('originalUrl').value;
+            const shortenedUrl = 'null';
+            const errorDiv = document.getElementById('addUrlError');
+
+            if (!originalUrl) {
+                errorDiv.textContent = 'Please fill in all fields';
+                errorDiv.classList.remove('d-none');
+                return;
+            }
+
+            const urlData = {
+                originalUrl: originalUrl,
+                shortenedUrl: shortenedUrl,
+                createdAt: new Date().toISOString(),
+                createdById: userId
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(urlData)
+                });
+
+                if (response.ok) {
+                    const newUrl = await response.json();
+                    addUrlToTable(newUrl);
+
+                    // Close modal and reset form
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addUrlModal'));
+                    modal.hide();
+                    document.getElementById('originalUrl').value = '';
+                    document.getElementById('shortenedUrl').value = '';
+                    errorDiv.classList.add('d-none');
+                } else {
+                    const error = await response.text();
+                    errorDiv.textContent = 'Failed to add URL: ' + error;
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.classList.remove('d-none');
+            }
+        });
+
+        // Delete URL
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('delete-btn')) {
+                const urlId = e.target.getAttribute('data-url-id');
+
+                if (confirm('Are you sure you want to delete this URL?')) {
+                    try {
+                        const response = await fetch(`${apiUrl}/${urlId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            // Remove row from table
+                            const row = document.querySelector(`tr[data-url-id="${urlId}"]`);
+                            row.remove();
+
+                            // Check if table is empty
+                            const tbody = document.getElementById('urlTableBody');
+                            if (tbody.children.length === 0) {
+                                document.getElementById('urlTableContainer').innerHTML = '<p>No URLs available.</p>';
+                            }
+                        } else {
+                            alert('Failed to delete URL');
+                        }
+                    } catch (error) {
+                        alert('Error: ' + error.message);
+                    }
+                }
+            }
+        });
+
+        function addUrlToTable(url) {
+            const container = document.getElementById('urlTableContainer');
+            let tbody = document.getElementById('urlTableBody');
+
+            // If no table exists, create one
+            if (!tbody) {
+                container.innerHTML = `
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Original URL</th>
+                                <th>Shortened URL</th>
+                                <th>Created At</th>
+                                ${isLoggedIn ? '<th>Actions</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody id="urlTableBody"></tbody>
+                    </table>
+                `;
+                tbody = document.getElementById('urlTableBody');
+            }
+
+            const createdAt = new Date(url.createdAt);
+            const formattedDate = createdAt.getFullYear() + '-' +
+                String(createdAt.getMonth() + 1).padStart(2, '0') + '-' +
+                String(createdAt.getDate()).padStart(2, '0') + ' ' +
+                String(createdAt.getHours()).padStart(2, '0') + ':' +
+                String(createdAt.getMinutes()).padStart(2, '0');
+
+            const row = document.createElement('tr');
+            row.setAttribute('data-url-id', url.id);
+            row.innerHTML = `
+                <td><a href="${url.originalUrl}" target="_blank">${url.originalUrl}</a></td>
+                <td>${url.shortenedUrl}</td>
+                <td>${formattedDate}</td>
+                ${isLoggedIn ? `<td><button class="btn btn-danger btn-sm delete-btn" data-url-id="${url.id}">Delete</button></td>` : ''}
+            `;
+
+            tbody.insertBefore(row, tbody.firstChild);
+        }
+    </script>
+}
+
