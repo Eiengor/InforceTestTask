@@ -36,8 +36,8 @@
             <tbody id="urlTableBody">
                 @foreach (var url in Model.Urls)
                 {
-                    <tr data-url-id="@url.Id">
-                        <td><a href="@url.OriginalUrl" target="_blank">@url.OriginalUrl</a></td>
+                    <tr data-url-id="@url.Id" class="@(Model.IsLoggedIn ? "url-row-clickable" : "")" style="@(Model.IsLoggedIn ? "cursor: pointer;" : "")">
+                        <td><a href="@url.OriginalUrl" target="_blank" onclick="event.stopPropagation();">@url.OriginalUrl</a></td>
                         <td>@url.ShortenedUrl</td>
                         <td>@url.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                         @if (Model.IsLoggedIn)
@@ -53,6 +53,7 @@
     }
 </div>
 
+<!-- Add URL Modal -->
 <div class="modal fade" id="addUrlModal" tabindex="-1" aria-labelledby="addUrlModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -81,10 +82,21 @@
         const isLoggedIn = @Model.IsLoggedIn.ToString().ToLower();
         const userId = @(Model.UserId ?? 0);
 
+        // Row click to navigate to details page (only for logged in users)
+        if (isLoggedIn) {
+            document.addEventListener('click', function(e) {
+                const row = e.target.closest('tr.url-row-clickable');
+                if (row && !e.target.classList.contains('delete-btn') && e.target.tagName !== 'A') {
+                    const urlId = row.getAttribute('data-url-id');
+                    window.location.href = `/ShortUrlInfo?id=${urlId}`;
+                }
+            });
+        }
+
         // Add URL
         document.getElementById('saveUrlBtn')?.addEventListener('click', async function() {
             const originalUrl = document.getElementById('originalUrl').value;
-            const shortenedUrl = 'null';
+            const shortenedUrl = "null";
             const errorDiv = document.getElementById('addUrlError');
 
             if (!originalUrl) {
@@ -193,14 +205,18 @@
             const row = document.createElement('tr');
             row.setAttribute('data-url-id', url.id);
             row.innerHTML = `
-                <td><a href="${url.originalUrl}" target="_blank">${url.originalUrl}</a></td>
+                <td><a href="${url.originalUrl}" target="_blank" onclick="event.stopPropagation();">${url.originalUrl}</a></td>
                 <td>${url.shortenedUrl}</td>
                 <td>${formattedDate}</td>
-                ${isLoggedIn ? `<td><button class="btn btn-danger btn-sm delete-btn" data-url-id="${url.id}">Delete</button></td>` : ''}
+                ${isLoggedIn ? `<td><button class="btn btn-danger btn-sm delete-btn" data-url-id="${url.id}" onclick="event.stopPropagation();">Delete</button></td>` : ''}
             `;
+
+            if (isLoggedIn) {
+                row.classList.add('url-row-clickable');
+                row.style.cursor = 'pointer';
+            }
 
             tbody.insertBefore(row, tbody.firstChild);
         }
     </script>
 }
-

@@ -1,4 +1,79 @@
 ﻿@page
 @model URLShort.Pages.ShortUrlInfoModel
 @{
+    ViewData["Title"] = "URL Details";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+@if (!Model.IsLoggedIn)
+{
+    <div class="alert alert-warning">
+        <p>You must be logged in to view this page.</p>
+        <a href="/" class="btn btn-primary">Go to Login</a>
+    </div>
+}
+else if (Model.UrlInfo == null)
+{
+    <div class="alert alert-danger">
+        <p>URL not found.</p>
+        <a href="/ShortUrlTable" class="btn btn-primary">Back to Table</a>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header">
+            <h5>URL Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <strong>ID:</strong>
+                </div>
+                <div class="col-md-9">
+                    @Model.UrlInfo.Id
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <strong>Original URL:</strong>
+                </div>
+                <div class="col-md-9">
+                    <a href="@Model.UrlInfo.OriginalUrl" target="_blank">@Model.UrlInfo.OriginalUrl</a>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <strong>Shortened URL:</strong>
+                </div>
+                <div class="col-md-9">
+                    <code>@Model.UrlInfo.ShortenedUrl</code>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <strong>Created At:</strong>
+                </div>
+                <div class="col-md-9">
+                    @Model.UrlInfo.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <strong>Created By (User ID):</strong>
+                </div>
+                <div class="col-md-9">
+                    @Model.UrlInfo.CreatedById
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="/ShortUrlTable" class="btn btn-secondary">Back to Table</a>
+        </div>
+    </div>
 }
